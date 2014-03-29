@@ -15,6 +15,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import numpy as np
 
+LIST_COUNTER = 1
 
 class STLFile(object):
     def __init__(self, data):
@@ -25,6 +26,17 @@ class STLFile(object):
         self.translate = None
         self.rotate = None
         self.wireframe = False
+
+        #self._gen_list()
+
+    def _gen_list(self):
+
+        self.list_number = glGenLists(1)
+        print "Making genlist %d" % self.list_number
+
+        glNewList(self.list_number, GL_COMPILE_AND_EXECUTE)
+        self.draw_vertices()
+        glEndList()
 
     def center(self):
         without_normals = self.data[:, 1:4, :]
@@ -135,34 +147,35 @@ class STLFile(object):
         glColor3f(1, 1, 1)
 
 
-    def draw(self):
-        if self.program:
-            exec self.program
+    def draw_vertices(self):
+        glPushMatrix()
+        if self.translate:
+            glTranslatef(*self.translate)
+
+        if self.rotate:
+            glRotatef(*self.rotate)
+
+        self.draw_axes(50)
+
+        if self.wireframe:
+            glBegin(GL_LINE_LOOP)
         else:
-            glPushMatrix()
-            if self.translate:
-                glTranslatef(*self.translate)
+            glBegin(GL_TRIANGLES)
 
-            if self.rotate:
-                glRotatef(*self.rotate)
+        num, m, n = self.data.shape
+        for i in range(num):
+            glNormal3f(self.data[i, 0, 0], self.data[i, 0, 1], self.data[i, 0, 2])
+            glVertex3f(self.data[i, 1, 0], self.data[i, 1, 1], self.data[i, 1, 2])
+            glVertex3f(self.data[i, 2, 0], self.data[i, 2, 1], self.data[i, 2, 2])
+            glVertex3f(self.data[i, 3, 0], self.data[i, 3, 1], self.data[i, 3, 2])
+        glEnd()
 
-            self.draw_axes(50)
+        glPopMatrix()
 
-            if self.wireframe:
-                glBegin(GL_LINE_LOOP)
-            else:
-                glBegin(GL_TRIANGLES)
 
-            num, m, n = self.data.shape
-            for i in range(num):
-                glNormal3f(self.data[i, 0, 0], self.data[i, 0, 1], self.data[i, 0, 2])
-                glVertex3f(self.data[i, 1, 0], self.data[i, 1, 1], self.data[i, 1, 2])
-                glVertex3f(self.data[i, 2, 0], self.data[i, 2, 1], self.data[i, 2, 2])
-                glVertex3f(self.data[i, 3, 0], self.data[i, 3, 1], self.data[i, 3, 2])
-            glEnd()
-
-            glPopMatrix()
-
+    def draw(self):
+        glCallList(self.list_number)
+        #self.draw_vertices()
 
 def BinarySTL(fname):
     with open(fname) as fp:
@@ -296,6 +309,8 @@ class STLWidget(QGLWidget):
         # glShadeModel(GL_SMOOTH)
         # glClearColor(0.0, 0.0, 0.0, 0.0)
         # glClearDepth(1.0)
+        glEnable(GL_CULL_FACE)
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, GLfloat_4(1., 1., 0., 0.))
         glEnable(GL_DEPTH_TEST)
         glShadeModel(GL_SMOOTH)
         glDepthFunc(GL_LEQUAL)
@@ -304,6 +319,19 @@ class STLWidget(QGLWidget):
         glEnable(GL_LIGHTING)
         glEnable(GL_LIGHT0)
         glLight(GL_LIGHT0, GL_POSITION, (0, 1, 1, 0))
+
+        #glLightfv(GL_LIGHT0, GL_AMBIENT, GLfloat_4(0.0, 1.0, 0.0, 1.0))
+        #glLightfv(GL_LIGHT0, GL_DIFFUSE, GLfloat_4(1.0, 1.0, 1.0, 1.0))
+        #glLightfv(GL_LIGHT0, GL_SPECULAR, GLfloat_4(1.0, 1.0, 1.0, 1.0))
+        #glLightfv(GL_LIGHT0, GL_POSITION, GLfloat_4(1.0, 1.0, 1.0, 0.0));
+        #glLightModelfv(GL_LIGHT_MODEL_AMBIENT, GLfloat_4(0.2, 0.2, 0.2, 1.0))
+
+        glEnable(GL_LIGHTING)
+        glEnable(GL_LIGHT0)
+
+        for s in self.stl:
+            s._gen_list()
+
         # glMatrixMode(GL_MODELVIEW)
 
     def resizeGL(self, width, height):

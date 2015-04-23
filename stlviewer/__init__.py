@@ -1,19 +1,27 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+from __future__ import division, print_function
 
 """
-
 based on: http://sukhbinder.wordpress.com/2013/11/28/binary-stl-file-reader-in-python-powered-by-numpy/
-
 """
 
-__author__ = 'Alexander Weigl'
+__author__ = 'Alexander Weigl <alexander.weigl@student.kit.edu>'
 
 from struct import unpack
+
+from OpenGL.GL import *
+from OpenGL.GLU import *
+from OpenGL.arrays import *
+from PyQt4.QtOpenGL import QGLWidget
+
+from time import time
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import numpy as np
+
+import sys, os
+import argparse
 
 LIST_COUNTER = 1
 
@@ -32,7 +40,7 @@ class STLFile(object):
     def _gen_list(self):
 
         self.list_number = glGenLists(1)
-        print "Making genlist %d" % self.list_number
+        print("Making genlist %d" % self.list_number)
 
         glNewList(self.list_number, GL_COMPILE_AND_EXECUTE)
         self.draw_vertices()
@@ -262,21 +270,14 @@ def TextSTL(fname):
 
                 line = lines.next()
                 if not line.startswith('endfacet'):
-                    print "ERROR: endfacet"
-
+                    print("ERROR: endfacet")
+                    
     n = len(triangles)
     ary = np.empty((n, 4, 3))
     for i, t in enumerate(triangles):
         ary[i, :, :] = t
     return STLFile(ary)
 
-
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.arrays import *
-from PyQt4.QtOpenGL import QGLWidget
-
-from time import time
 
 
 class STLWidget(QGLWidget):
@@ -379,7 +380,7 @@ class STLWidget(QGLWidget):
         assert isinstance(event, QWheelEvent)
         scrolled = event.delta() / 360.0 / 0.33 / 10
         self.scale += scrolled
-        print self.scale, scrolled
+        print(self.scale, scrolled)
         self.update()
 
     def mousePressEvent(self, event):
@@ -458,11 +459,7 @@ class STLFrame(QMainWindow):
         widget = STLWidget(stlfile)
         self.setCentralWidget(widget)
 
-import sys
-
-
-if __name__ == '__main__':
-
+def main():
     def _float_vec(s):
         return map(float, s.split(" "))
 
@@ -475,6 +472,7 @@ if __name__ == '__main__':
                 setattr(o, k, v)
         return o
 
+    import sys
 
     models = []
     i = iter(sys.argv[1:])
@@ -493,10 +491,13 @@ if __name__ == '__main__':
 
         if a == '-w':
             stack['wireframe'] = not stack['wireframe']
-    import sys
 
     app = QApplication(sys.argv)
-    print models
+    print(models)
     window = STLFrame(models)
     window.show()
     app.exec_()
+
+
+if __name__ == '__main__':
+    main()
